@@ -3,6 +3,7 @@
 using std::vector;  using std::max;
 using std::ifstream;using std::ofstream;
 using std::cout;    using std::endl;
+using std::string;
 
 
 /***********************************************
@@ -71,6 +72,16 @@ Matrix<double> mse_deriv(const Matrix<double>& y, const Matrix<double>& a)
 {
     double m = y.cols();
     return (1./(double)m) * (a - y);
+}
+
+
+double mean_absolute_error(const Matrix<double>& y, const Matrix<double>& a)
+{   //the two matrices must be vectors (1,c) as the output of the network
+    size_t c = y.cols();
+    Matrix<double> dif = y - a;
+    dif = apply_function(dif, fabs);
+    Matrix<double> ret = sum(dif,1);
+    return ret(0,0)/(double)c; 
 }
 
 
@@ -281,12 +292,13 @@ void Model::gradient_descent(const double& learning_rate)
 void Model::gradient_descent_with_RMSprop(const double& learning_rate) 
 {
     size_t N = weights.size();
+    double epsilon = 1.E-8;
     for(size_t i = 0 ; i < N ; ++i)
     {
         weights[i] = weights[i] - learning_rate * dw[i]
-                                  /apply_function(Sdw[i], sqrt); 
+                                 /(epsilon + apply_function(Sdw[i], sqrt)); 
         biases[i] = biases[i] - learning_rate * db[i]
-                                  /apply_function(Sdb[i], sqrt); 
+                                 /(epsilon + apply_function(Sdb[i], sqrt)); 
     }
 }
 
@@ -358,20 +370,39 @@ void Model::train(const double& learning_rate,
 
             (this->*update_func)(learning_rate);
         }
-        out << loss/(double)batch_size << endl;
+        loss = loss/(double)batch_size;
+        out << loss << endl;
     }
     out.close();
 }
 
-void Model::predict(const Matrix<double>& test_data)
+void Model::predict(const Matrix<double>& new_data)
 {
-    size_t m = test_data.cols();
+    size_t m = new_data.cols();
     for(size_t i = 0 ; i < biases.size() ; ++i)
     { //biases also need broadcast here for the new data on the test set
         biases[i] = extend_cols(biases[i], m);
     }
 
-    forward_prop(test_data);
+    forward_prop(new_data);
     alphas[alphas.size()-1].print_to_file("output/predictions.dat");
 
+}
+
+
+double Model::evaluate(const Matrix<double>& new_data,
+                     const Matrix<double>& new_labels, const string& metrics)
+{
+    size_t r = new_data.rows();
+    size_t c = new_data.cols();
+
+    predict(new_data);
+    Matrix<double> pred = alphas[alphas.size()-1];
+    double error{0.};
+    if(metrics == "mae")
+    {
+        error = mean_absolute_error(new_labels, pred);
+    }
+
+    return error;
 }

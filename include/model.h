@@ -27,6 +27,8 @@ public:
     void train(const double&, size_t, size_t,
                const Matrix<double>&, const Matrix<double>&);
     void predict(const Matrix<double>&);
+    double evaluate(const Matrix<double>&, const Matrix<double>&,
+                                         const std::string&);
 
     std::vector< Matrix<double> > weights;
     std::vector< Matrix<double> > biases;
