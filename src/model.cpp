@@ -99,7 +99,10 @@ Matrix<double> read_from_file(const std::string& file, size_t r, size_t c)
 }
 
 
-
+// Needs modification. Will not work because the std and mean
+// are extracted from the training data and are used to normalize
+// the training and also the testing data. So it's better to
+// hard code it in main.
 Matrix<double> normalize_data(const Matrix<double>& m, size_t axis)
 {
     size_t r = m.rows();
@@ -144,11 +147,13 @@ Matrix<double> normalize_data(const Matrix<double>& m, size_t axis)
 
 Model::Model(const std::vector<size_t>& l,
              const std::vector<std::string>& act,
-             const std::string& name)
+             const std::string& name,
+             const std::string& opt)
 {
     layers = l;
     activations = act;
     loss_function = name;
+    optimizer = opt;
     loss = 0.;
 }
 
@@ -169,11 +174,17 @@ void Model::set_parameters(size_t m)
         Matrix<double> w_der(w.rows(), w.cols());
         dw.push_back(w_der);
 
+        Matrix<double> opt_w(w.rows(), w.cols(), 1.);
+        Sdw.push_back(opt_w);
+
         Matrix<double> b(layers[i],m);
         biases.push_back(b);
 
         Matrix<double> b_der(b.rows(), b.cols());
         db.push_back(b_der);
+
+        Matrix<double> opt_b(b.rows(), b.cols(), 1.);
+        Sdb.push_back(opt_b);
 
         Matrix<double> zi(b.rows(), b.cols());
         zetas.push_back(zi);
@@ -266,6 +277,19 @@ void Model::gradient_descent(const double& learning_rate)
     }
 }
 
+
+void Model::gradient_descent_with_RMSprop(const double& learning_rate) 
+{
+    size_t N = weights.size();
+    for(size_t i = 0 ; i < N ; ++i)
+    {
+        weights[i] = weights[i] - learning_rate * dw[i]
+                                  /apply_function(Sdw[i], sqrt); 
+        biases[i] = biases[i] - learning_rate * db[i]
+                                  /apply_function(Sdb[i], sqrt); 
+    }
+}
+
 void Model::train(const double& learning_rate,
                   size_t batch_size, size_t epochs,
                   const Matrix<double>& train_data,
@@ -286,6 +310,28 @@ void Model::train(const double& learning_rate,
     //function pointer to loss functions
     double (*f)(const Matrix<double>&, const Matrix<double>&);
 
+    if(loss_function == "mean_squared_error")
+        f = mean_squared_error;
+    else if(loss_function == "cross_entropy")
+        f = cross_entropy;
+    else
+    {
+        cout << "Please specify the loss function!" << endl;
+        throw "Loss error!\n";
+    }
+
+    void (Model::*update_func)(const double&);
+    if(optimizer == "RMSprop")
+    {
+        update_func = &Model::gradient_descent_with_RMSprop;
+    }
+    else
+    {
+        update_func = &Model::gradient_descent;
+    }
+
+    double beta{0.95};
+
     for(size_t ep = 0 ; ep < epochs ; ++ep)
     {
         loss = 0.;
@@ -298,18 +344,19 @@ void Model::train(const double& learning_rate,
             Matrix<double> batch_labels = train_labels.sub_matrix(0,0,left,right);
 
             forward_prop(batch_data);
-
-            if(loss_function == "mean_squared_error")
-                f = mean_squared_error;
-            else if(loss_function == "cross_entropy")
-                f = cross_entropy;
-            else
-                cout << "please specify the loss function!" << endl;
-
             loss += f(batch_labels, alphas[alphas.size()-1]);
-
             backward_prop(batch_data, batch_labels);
-            gradient_descent(learning_rate);
+
+            if(optimizer == "RMSprop")
+            {
+                for(size_t o = 0 ; o < Sdw.size() ; ++o)
+                {
+                    Sdw[o] = beta * Sdw[o] + (1. - beta) * dw[o] * dw[o];
+                    Sdb[o] = beta * Sdb[o] + (1. - beta) * db[o] * db[o];
+                }
+            }
+
+            (this->*update_func)(learning_rate);
         }
         out << loss/(double)batch_size << endl;
     }

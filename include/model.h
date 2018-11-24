@@ -16,12 +16,14 @@ public:
 
     Model(const std::vector<size_t>&,
           const std::vector<std::string>&,
+          const std::string&,
           const std::string&);
 
     void set_parameters(size_t);
     void forward_prop(const Matrix<double>&);
     void backward_prop(const Matrix<double>&, const Matrix<double>&);
     void gradient_descent(const double&); 
+    void gradient_descent_with_RMSprop(const double&); 
     void train(const double&, size_t, size_t,
                const Matrix<double>&, const Matrix<double>&);
     void predict(const Matrix<double>&);
@@ -32,11 +34,13 @@ public:
     std::vector< Matrix<double> > alphas;
     std::vector< Matrix<double> > dw;
     std::vector< Matrix<double> > db;
+    std::vector< Matrix<double> > Sdw;
+    std::vector< Matrix<double> > Sdb;
     std::vector<size_t> layers;
     std::vector<std::string> activations;
     std::string loss_function;
+    std::string optimizer;
     double loss;
-
 };
 
 double sigmoid(double);
