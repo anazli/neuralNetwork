@@ -7,6 +7,13 @@
 #include<random>
 #include<vector>
 
+
+/***********************************************
+ * 
+ * DECLARATIONS  
+ * 
+ ***********************************************/
+
 template <class T>
 class Matrix {
 
@@ -15,7 +22,8 @@ public:
     Matrix(size_t r = 0, size_t c = 0, T elem = 0);
 
     size_t rows()const{return m_matrix.size();}
-    size_t cols()const{return !(m_matrix.empty())? m_matrix[0].size(): m_matrix.size();}
+    size_t cols()const{return !(m_matrix.empty()) ?
+                              m_matrix[0].size() : m_matrix.size();}
 
     T& operator()(size_t i, size_t j){return m_matrix[i][j];}
     const T& operator()(size_t i, size_t j)const{return m_matrix[i][j];}
@@ -32,9 +40,18 @@ private:
 
 };
 
+
+/***********************************************
+ * 
+ * GENERAL NON-MEMBER FUNCTIONS  
+ * 
+ ***********************************************/
+
+// Defined in matrix.cpp
 void seed(const double&);
-Matrix<double> real_rand(size_t r, size_t c, double lower = 0., double upper = 1.);
-Matrix<int> int_rand(size_t r, size_t c, size_t lower, size_t upper);
+Matrix<double> real_rand(size_t, size_t, double lower = 0., double upper = 1.);
+Matrix<int> int_rand(size_t, size_t, size_t, size_t);
+
 
 template <typename T>
 Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
@@ -52,6 +69,7 @@ Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
 
     return ret;
 }
+
 
 template <typename T>
 Matrix<T> sum(const Matrix<T>& m, int axis = 0)
@@ -88,6 +106,69 @@ Matrix<T> sum(const Matrix<T>& m, int axis = 0)
     std::cout << "Please specify the axis! 0 = sum of rows, 1 = sum of columns.\n";
     throw "Sumation error!\n";
 }
+
+
+template <typename T>
+Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
+{
+    size_t r = m.rows();
+    size_t c = m.cols();
+    if(axis == 0)
+    {
+        Matrix<T> ret(1,c);
+        ret = sum(m,0); 
+        ret = ret/(double)r;
+        return ret;
+    }
+    else if(axis == 1)
+    {
+        Matrix<T> ret(r,1);
+        ret = sum(m,1);
+        ret = ret/(double)c;
+        return ret;
+    }
+    else
+    {
+        std::cout << "Please specify the axis! 0 = mu of rows,"
+                                         "1 = mu of columns.\n";
+        throw "Mean value error!\n";
+    }
+
+}
+
+
+template <typename T>
+Matrix<T> standard_dev(const Matrix<T>& m, size_t axis = 0)
+{
+    size_t r = m.rows();
+    size_t c = m.cols();
+
+    if(axis == 0)
+    {
+        Matrix<T> ret(1,c);
+        Matrix<T> mu = mean_value(m,0);
+        mu = extend_rows(mu,r);
+        ret = (1./(r-1)) * (m - mu) * (m - mu);
+        ret = apply_function(ret, sqrt);
+        return ret;
+    }
+    if(axis == 1)
+    {
+        Matrix<T> ret(r,1);
+        Matrix<T> mu = mean_value(m,1);
+        mu = extend_cols(mu,c);
+        ret = (1./(c-1)) * (m - mu) * (m - mu);
+        ret = apply_function(ret, sqrt);
+        return ret;
+    }
+    else
+    {
+        std::cout << "Please specify the axis! 0 = std of rows,"
+                                         "1 = std of columns.\n";
+        throw "Standard dev error!\n";
+    }
+}
+
 
 // Constructor with default arguments. We can create a (i,j) matrix or
 // an empty matrix. There is no push_back operation so the only reason

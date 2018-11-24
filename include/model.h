@@ -48,6 +48,7 @@ Matrix<double> cross_entropy_deriv(const Matrix<double>&, const Matrix<double>&)
 double mean_squared_error(const Matrix<double>&, const Matrix<double>&);
 Matrix<double> mse_deriv(const Matrix<double>&, const Matrix<double>&);
 double glorot_uniform(size_t, size_t);
-Matrix<double> read_from_file(const std::string&, size_t, size_t);
+Matrix<double> read_from_file(const std::string&, size_t, size_t); 
+Matrix<double> normalize_data(const Matrix<double>&, size_t);
 
 #endif

@@ -100,6 +100,40 @@ Matrix<double> read_from_file(const std::string& file, size_t r, size_t c)
 
 
 
+Matrix<double> normalize_data(const Matrix<double>& m, size_t axis)
+{
+    size_t r = m.rows();
+    size_t c = m.cols();
+
+    if(axis == 0) //normalizing data with respect to mu and std of rows
+    {
+        Matrix<double> ret(r,c);
+        Matrix<double> mu = mean_value(m,0);
+        Matrix<double> st = standard_dev(m,0);
+        mu = extend_rows(mu,r);
+        st = extend_rows(mu,r); 
+        ret = (ret-mu)/st;
+        return ret;
+    }
+    if(axis == 1) //normalizing data with respect to mu and std of cols
+    {
+        Matrix<double> ret(r,c);
+        Matrix<double> mu = mean_value(m,1);
+        Matrix<double> st = standard_dev(m,1);
+        mu = extend_cols(mu,c);
+        st = extend_cols(mu,c); 
+        ret = (ret-mu)/st;
+        return ret;
+    }
+    else
+    {
+        cout << "Specify the axis of normalization!" << endl;
+        throw "Normalization error!\n";
+    }
+}
+
+
+
 /***********************************************
  * 
  * MEMBER FUNCTIONS
@@ -117,6 +151,8 @@ Model::Model(const std::vector<size_t>& l,
     loss_function = name;
     loss = 0.;
 }
+
+
 
 void Model::set_parameters(size_t m)
 {
@@ -147,6 +183,7 @@ void Model::set_parameters(size_t m)
 }
 
 
+
 void Model::forward_prop(const Matrix<double>& data)
 {
     size_t N = weights.size();
@@ -168,6 +205,7 @@ void Model::forward_prop(const Matrix<double>& data)
         X = alphas[i];
     }
 }
+
 
 
 void Model::backward_prop(const Matrix<double>& data,
