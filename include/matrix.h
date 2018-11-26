@@ -8,11 +8,13 @@
 #include<vector>
 
 
-/***********************************************
+/********************************************************************
  * 
  * DECLARATIONS  
  * 
- ***********************************************/
+ ********************************************************************/
+
+
 
 template <class T>
 class Matrix {
@@ -21,9 +23,10 @@ public:
     
     Matrix(size_t r = 0, size_t c = 0, T elem = 0);
 
-    size_t rows()const{return m_matrix.size();}
+    size_t rows()const{return m_matrix.size();}/*!< \brief Magnetic field's vector coords.*/
     size_t cols()const{return !(m_matrix.empty()) ?
                               m_matrix[0].size() : m_matrix.size();}
+                              //if rows=0, cols=0
 
     T& operator()(size_t i, size_t j){return m_matrix[i][j];}
     const T& operator()(size_t i, size_t j)const{return m_matrix[i][j];}
@@ -41,17 +44,28 @@ private:
 };
 
 
-/***********************************************
+
+/********************************************************************
  * 
  * GENERAL NON-MEMBER FUNCTIONS  
  * 
- ***********************************************/
+ ********************************************************************/
+
+
 
 // Defined in matrix.cpp
 void seed(const double&);
 Matrix<double> real_rand(size_t, size_t, double lower = 0., double upper = 1.);
 Matrix<int> int_rand(size_t, size_t, size_t, size_t);
 
+
+
+/*! \brief Applies an operation on every element as defined by *f.  
+ *
+ *  @param Input matrix which the operation is applied on. 
+ *  @param Function of type T that takes a T arg and defines the operation.  
+ *  @return A new matrix of the same type as the input. 
+ */
 
 template <typename T>
 Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
@@ -71,8 +85,19 @@ Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
 }
 
 
+
+/*! \brief Returns the sum of the rows or columns of a matrix.  
+ *
+ *  @param Input matrix which the operation is applied on. 
+ *  @param size_t arg. If 0 the sum of rows is computed, if 1 the sum of
+ *         columns. Default value is 0.  
+ *  @return A new matrix of the same type as the input containing the sums.
+ *          If axis=0 it's a (1,c) row vector,
+ *          if axis=1 it's (r,1) column vector. 
+ */
+
 template <typename T>
-Matrix<T> sum(const Matrix<T>& m, int axis = 0)
+Matrix<T> sum(const Matrix<T>& m, size_t axis = 0)
 {
     size_t r = m.rows();
     size_t c = m.cols();
@@ -103,10 +128,22 @@ Matrix<T> sum(const Matrix<T>& m, int axis = 0)
         return ret;
     }
 
-    std::cout << "Please specify the axis! 0 = sum of rows, 1 = sum of columns.\n";
+    std::cout << "Please specify the axis! 0 = sum of rows, 1 = sum of"
+                                                            " columns.\n";
     throw "Sumation error!\n";
 }
 
+
+
+/*! \brief Computes the mean value of the rows or columns of a matrix.  
+ *
+ *  @param Input matrix which the operation is applied on. 
+ *  @param size_t arg. If 0 the mean of rows is computed, if 1 the mean of
+ *  columns. Default value is 0.  
+ *  @return A new matrix of the same type as the input containing the mean
+ *          values. If axis=0 it's a (1,c) row vector, 
+ *          if axis=1 it's (r,1) column vector. 
+ */
 
 template <typename T>
 Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
@@ -136,6 +173,17 @@ Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
 
 }
 
+
+
+/*! \brief Computes the standard deviation of the rows or columns of a matrix.  
+ *
+ *  @param Input matrix which the operation is applied on. 
+ *  @param size_t arg. If 0 the mean of rows is computed, if 1 the mean of
+ *  columns. Default value is 0.  
+ *  @return A new matrix of the same type as the input containing the std
+ *          values. If axis=0 it's a (1,c) row vector, 
+ *          if axis=1 it's (r,1) column vector. 
+ */
 
 template <typename T>
 Matrix<T> standard_dev(const Matrix<T>& m, size_t axis = 0)
@@ -170,10 +218,14 @@ Matrix<T> standard_dev(const Matrix<T>& m, size_t axis = 0)
 }
 
 
-// Constructor with default arguments. We can create a (i,j) matrix or
-// an empty matrix. There is no push_back operation so the only reason
-// the later is created is when we want to copy an existing matrix (i,j)
-// to it or when it's asigned the result of an operation (+,-,*) between 2 matrices.
+
+/*! \brief Default Constructor.  
+ *
+ *  @param size_t r. The number of rows of the matrix (default). 
+ *  @param size_t r. The number of cols of the matrix (default). 
+ *  @param T elem. A value of type T which is assigned to all elements (default). 
+ */
+
 template <typename T>
 Matrix<T>::Matrix(size_t r, size_t c, T elem)
 {
@@ -186,12 +238,15 @@ Matrix<T>::Matrix(size_t r, size_t c, T elem)
         throw "Dimension error!";
     }
 
-    std::vector< std::vector<T> > temp(r, std::vector<T>(c, elem));// instead of a 2 for loops
-    m_matrix = temp;                                            // create a copy of a 2D vector
+    std::vector< std::vector<T> > temp(r, std::vector<T>(c, elem));
+    m_matrix = temp; //instead of 2 for loops, create a copy of a 2D vector.
 
 }
 
-// Unary operator (-).
+
+
+/*! \brief Unary operator (-). Returns the opposite matrix. */
+
 template <typename T>
 Matrix<T> Matrix<T>::operator-()const
 {
@@ -209,6 +264,10 @@ Matrix<T> Matrix<T>::operator-()const
 
     return ret;
 }
+
+
+
+/*! \brief Prints the elements of the matrix to standard output.*/
 
 template <typename T>
 void Matrix<T>::print()const
@@ -228,6 +287,12 @@ void Matrix<T>::print()const
 }
 
 
+
+/*! \brief Prints the elements of the matrix to a file.  
+ *
+ *  @param string file. The name of the file. 
+ */
+
 template <typename T>
 void Matrix<T>::print_to_file(std::string file)const
  {
@@ -246,6 +311,18 @@ void Matrix<T>::print_to_file(std::string file)const
     }
     out.close();
 }
+
+
+
+/*! \brief Returns a sub-matrix.  
+ *
+ *  @param size_t r1. First row of the sub-matrix is the r1th row of the present.  
+ *  @param size_t r2. Last row of the sub-matrix is the (r2-1)th row of the present. 
+ *  @param size_t c1. First col of the sub-matrix is the c1th col of the present.  
+ *  @param size_t c2. Last col of the sub-matrix is the (c2-1)th row of the present. 
+ *  @return A new matrix of the same type as the present and of shape 
+ *          [r2-r1,c2-c1]. 
+ */
 
 template <typename T>
 Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
@@ -269,11 +346,11 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
     size_t c = c2 - c1;
     size_t sub_i = 0; //the indexes of the sub_matrix must start from 0
     size_t sub_j = 0;
-    if(r == 0 && c != 0) //not just r == 0, because this will run even when c == 0 is also true.
-    {
+    if(r == 0 && c != 0) //not just r == 0, because this will run even when
+    {                             //c == 0 is also true.
         Matrix<T> m(1,c);
-        //when we want take a matrix's row (r==0), then
-        //the sub-matrix is a (1,c) column vector.
+        //when we want to take a matrix's row (r1==r2 hence r==0), then
+        //the sub-matrix is a (1,c) row vector.
         sub_j = 0;
         for(size_t i = c1 ; i < c2 ; ++i)
         {
@@ -281,7 +358,7 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
         }
         return m;
     }
-    else if(c == 0 && r != 0) //same as the first condition.
+    else if(c == 0 && r != 0) //same as the first condition for a column vector.
     {
         Matrix<T> m(r,1);
         sub_i = 0;
@@ -292,10 +369,10 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
         return m;
     }
     else if(r == 0 && c == 0)//this condition is because when r1==r2, c1==c2
-    {                        //the 2 for loops in the following contition
+    {                        //the 2 for loops in the next contition
         Matrix<T> m(1,1);    //will not run and the shape of the sub-m will 
-        m(0,0) = this->operator()(r1,c1);//be (0,0) (empty matrix) and not (1,1)->scalar value.
-        return m;
+        m(0,0) = this->operator()(r1,c1);//be (0,0) (empty matrix) and not (1,1)
+        return m;                                              //->scalar value.
     }
     else 
     {
@@ -313,9 +390,14 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
         }
         return m;
     }
-
 }
 
+
+
+/*! \brief Returns the transpose matrix of the present matrix.  
+ *
+ *  @return A new matrix of the same type as the present and of shape [c,r]. 
+ */
 template <typename T>
 Matrix<T> Matrix<T>::trans()const
 {
@@ -334,7 +416,14 @@ Matrix<T> Matrix<T>::trans()const
 }
 
 
-// Matrix multiplication.
+
+/*! \brief Returns the product of two matrices.  
+ *
+ *  @param Matrix<T> m1. The first matrix.  
+ *  @param Matrix<T> m2. The second matrix.  
+ *  @return A new matrix of the same type as the two inputs and of shape [r1,c2]. 
+ */
+
 template <typename T>
 Matrix<T> multiply(const Matrix<T>& m1, const Matrix<T>& m2)
 {
@@ -369,6 +458,16 @@ Matrix<T> multiply(const Matrix<T>& m1, const Matrix<T>& m2)
     return m;
 }
 
+
+
+/*! \brief Returns a matrix which has r rows with the same elements as the
+ *    input vector at every column. Assuming every column has the same elements.    
+ *
+ *  @param Matrix<T> m. The input matrix.  
+ *  @param size_t r. The number of rows of the new matrix.  
+ *  @return A new matrix of the same type as the input and of shape [r,c]. 
+ */
+
 template <typename T>
 Matrix<T> extend_rows(const Matrix<T>& m, size_t r)
 {
@@ -378,11 +477,21 @@ Matrix<T> extend_rows(const Matrix<T>& m, size_t r)
     {
         for(size_t j = 0 ; j < c ; ++j)
         {
-            ret(i,j) = m(0,j);
-        }
+            ret(i,j) = m(0,j); //assuming every row of m has the same elements
+        }             //as those of the first one. just take those of the first.
     }
     return ret;
 }
+
+
+
+/*! \brief Returns a matrix which has c cols with the same elements as the
+ *         input vector at every row. Assuming every row has the same elements.   
+ *
+ *  @param Matrix<T> m. The input matrix.  
+ *  @param size_t r. The number of cols of the new matrix.  
+ *  @return A new matrix of the same type as the input and of shape [r,c]. 
+ */
 
 template <typename T>
 Matrix<T> extend_cols(const Matrix<T>& m, size_t c)
@@ -393,14 +502,27 @@ Matrix<T> extend_cols(const Matrix<T>& m, size_t c)
     {
         for(size_t j = 0 ; j < c ; ++j)
         {
-            ret(i,j) = m(i,0);
-        }
+            ret(i,j) = m(i,0); //assuming every col of m has the same elements
+        }             //as those of the first one. just take those of the first.
     }
     return ret;
 }
+
+
+
+/********************************************************************
+ * 
+ * BINARY OPERATORS  
+ * 
+ ********************************************************************/
+
+
+
 //---------Comparison operators------------------------
+
 // Two types (T, S), they don't have to be of the same type
 // because we just compare their dimensions.
+
 template <typename T, typename S>
 bool operator==(const Matrix<T>& m1, const Matrix<S>& m2)
 {
@@ -413,9 +535,14 @@ bool operator!=(const Matrix<T>& m1, const Matrix<S>& m2)
     return !(m1 == m2);
 }
 
+
+
 //---------Arithmetic operators------------------------
 
-//Addition of two Matrices.
+
+
+/*! \brief Element-wise addition of two Matrices.*/
+
 template <typename T>
 Matrix<T> operator+(const Matrix<T>& m1, const Matrix<T>& m2)
 {
@@ -439,7 +566,10 @@ Matrix<T> operator+(const Matrix<T>& m1, const Matrix<T>& m2)
     return m;
 }
 
-//Addition of a Matrix and number.
+
+
+/*! \brief Element-wise addition of a Matrix and a scalar.*/
+
 template <typename T>
 Matrix<T> operator+(const Matrix<T>& m, const T& num)
 {
@@ -457,14 +587,20 @@ Matrix<T> operator+(const Matrix<T>& m, const T& num)
     return ret;
 }
 
-//Addition of a number and Matrix using the operator above.
+
+
+/*! \brief Element-wise addition of a scalar and a Matrix.*/
+
 template <typename T>
 Matrix<T> operator+(const T& num, const Matrix<T>& m)
 {
     return m + num;
 }
 
-// Subtractions of two Matrices.
+
+
+/*! \brief Element-wise subtraction of two Matrices.*/
+
 template <typename T>
 Matrix<T> operator-(const Matrix<T>& m1, const Matrix<T>& m2)
 {
@@ -476,11 +612,19 @@ Matrix<T> operator-(const Matrix<T>& m1, const Matrix<T>& m2)
     return m1 + (-m2);
 }
 
+
+
+/*! \brief Element-wise subtraction of a Matrix and a scalar.*/
+
 template <typename T>
 Matrix<T> operator-(const Matrix<T>& m, const T& num)
 {
     return m + (-num);
 }
+
+
+
+/*! \brief Element-wise subtraction of a scalar and a Matrix.*/
 
 template <typename T>
 Matrix<T> operator-(const T& num, const Matrix<T>& m)
@@ -488,28 +632,31 @@ Matrix<T> operator-(const T& num, const Matrix<T>& m)
     return num + (-m);
 }
 
-// Element-wise multiplication (Matrix, Matrix), (Matrix, scalar)
-// Using the overloaded * operator.
+
+
+/*! \brief Element-wise multiplication of two Matrices.*/
+
 template <typename T>
 Matrix<T> operator*(const Matrix<T>& m1, const Matrix<T>& m2)
 {
     Matrix<T> temp(1,1); 
-    if(m1 == temp) //if one matrix is (1,1)=scalar do matrix-scalar element-wise multiplication.
-    {
+    if(m1 == temp) //if one matrix is (1,1)=scalar do matrix-scalar
+    {              //element-wise multiplication.
         return m1(0,0) * m2;
     }
     else if(m2 == temp) // the same.
     {
         return m1 * m2(0,0);
     }
-    else if(m1 == temp && m2 == temp) //if they are both (1,1) return a (1,1) matrix.
-    {
+    else if(m1 == temp && m2 == temp) //if they are both (1,1) return a (1,1)
+    {                                                               // matrix.
         return m1(0,0) * m2(0,0);
     }
 
     if(m1 != m2) //if they are other than (1,1) and their dims don't match, throw.
     {
-        std::cout << "Matrix dimensions don't match. Cannot do element-wise multiplication!\n";
+        std::cout << "Matrix dimensions don't match. Cannot do element-wise"
+                                                        " multiplication!\n";
         throw "Element-wise multiplication error.\n";
     }
     size_t r = m1.rows();
@@ -525,6 +672,10 @@ Matrix<T> operator*(const Matrix<T>& m1, const Matrix<T>& m2)
     
     return m;
 }
+
+
+
+/*! \brief Element-wise multiplication of a Matrix and a scalar.*/
 
 template <typename T>
 Matrix<T> operator*(const Matrix<T>& m, const T& num)
@@ -543,6 +694,10 @@ Matrix<T> operator*(const Matrix<T>& m, const T& num)
     return ret;
 }
 
+
+
+/*! \brief Element-wise multiplication of a scalar and a Matrix.*/
+
 template <typename T>
 Matrix<T> operator*(const T& num, const Matrix<T>& m)
 {
@@ -551,30 +706,30 @@ Matrix<T> operator*(const T& num, const Matrix<T>& m)
 
 
 
+/*! \brief Element-wise division of two Matrices.*/
 
-// Element-wise division (Matrix, Matrix), (Matrix, scalar)
-// Using the overloaded / operator.
 template <typename T>
 Matrix<T> operator/(const Matrix<T>& m1, const Matrix<T>& m2)
 {
     Matrix<T> temp(1,1); 
-    if(m1 == temp) //if one matrix is (1,1)=scalar do matrix-scalar element-wise multiplication.
+    if(m1 == temp && m2 != temp) //if the first matrix is [1,1]=scalar, throw. 
     {
         std::cout << "Cannot divide a scalar by a matrix!\n";
         throw "Element-wise division error.\n";
     }
-    else if(m2 == temp) // the same.
-    {
+    else if(m1 != temp && m2 == temp) // if only the second is [1,1]=scalar, 
+    {                      //do element-wise division between matrix and scalar. 
         return m1 / m2(0,0);
     }
-    else if(m1 == temp && m2 == temp) //if they are both (1,1) return a (1,1) matrix.
-    {
+    else if(m1 == temp && m2 == temp) //if they are both [1,1] return a [1,1]
+    {                                                            // matrix.
         return m1(0,0) / m2(0,0);
     }
 
-    if(m1 != m2) //if they are other than (1,1) and their dims don't match, throw.
+    if(m1 != temp && m2 != temp && m1 != m2) //if their dims don't match, throw.
     {
-        std::cout << "Matrix dimensions don't match. Cannot do element-wise division!\n";
+        std::cout << "Matrix dimensions don't match. Cannot do element-wise"
+                                                             " division!\n";
         throw "Element-wise division error.\n";
     }
     size_t r = m1.rows();
@@ -591,6 +746,9 @@ Matrix<T> operator/(const Matrix<T>& m1, const Matrix<T>& m2)
     return m;
 }
 
+
+
+/*! \brief Element-wise division of a Matrix and a scalar.*/
 
 template <typename T>
 Matrix<T> operator/(const Matrix<T>& m, const T& num)

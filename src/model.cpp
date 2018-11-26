@@ -6,10 +6,16 @@ using std::cout;    using std::endl;
 using std::string;
 
 
-/***********************************************
+/********************************************************************
  * 
  * GENERAL FUNCTIONS
  * 
+ *******************************************************************/
+
+
+
+/***********************************************
+ * Activations 
  ***********************************************/
 
 
@@ -40,6 +46,11 @@ double relu_deriv(double x)
 
     return NAN;
 }
+
+
+/***********************************************
+ * Loss functions 
+ ***********************************************/
 
 
 double cross_entropy(const Matrix<double>& y, const Matrix<double>& a)
@@ -75,6 +86,11 @@ Matrix<double> mse_deriv(const Matrix<double>& y, const Matrix<double>& a)
 }
 
 
+/***********************************************
+ * Metrics  
+ ***********************************************/
+
+
 double mean_absolute_error(const Matrix<double>& y, const Matrix<double>& a)
 {   //the two matrices must be vectors (1,c) as the output of the network
     size_t c = y.cols();
@@ -85,15 +101,22 @@ double mean_absolute_error(const Matrix<double>& y, const Matrix<double>& a)
 }
 
 
+/***********************************************
+ * Initializers  
+ ***********************************************/
+
+
 double glorot_uniform(size_t input_layer, size_t output_layer)
 {
     return (6./sqrt(input_layer + output_layer)); 
 }
 
 
-
+// Reads the input data and returns an array (r,c). The rows and cols
+// must be known in advance. Training requires the data to be of the form
+// (nx,m)
 Matrix<double> read_from_file(const std::string& file, size_t r, size_t c)
-{
+{   
     ifstream in;
     in.open(file);
     Matrix<double> ret(r,c);
@@ -110,50 +133,12 @@ Matrix<double> read_from_file(const std::string& file, size_t r, size_t c)
 }
 
 
-// Needs modification. Will not work because the std and mean
-// are extracted from the training data and are used to normalize
-// the training and also the testing data. So it's better to
-// hard code it in main.
-Matrix<double> normalize_data(const Matrix<double>& m, size_t axis)
-{
-    size_t r = m.rows();
-    size_t c = m.cols();
 
-    if(axis == 0) //normalizing data with respect to mu and std of rows
-    {
-        Matrix<double> ret(r,c);
-        Matrix<double> mu = mean_value(m,0);
-        Matrix<double> st = standard_dev(m,0);
-        mu = extend_rows(mu,r);
-        st = extend_rows(mu,r); 
-        ret = (ret-mu)/st;
-        return ret;
-    }
-    if(axis == 1) //normalizing data with respect to mu and std of cols
-    {
-        Matrix<double> ret(r,c);
-        Matrix<double> mu = mean_value(m,1);
-        Matrix<double> st = standard_dev(m,1);
-        mu = extend_cols(mu,c);
-        st = extend_cols(mu,c); 
-        ret = (ret-mu)/st;
-        return ret;
-    }
-    else
-    {
-        cout << "Specify the axis of normalization!" << endl;
-        throw "Normalization error!\n";
-    }
-}
-
-
-
-/***********************************************
+/********************************************************************
  * 
  * MEMBER FUNCTIONS
  * 
- ***********************************************/
-
+ *******************************************************************/
 
 
 Model::Model(const std::vector<size_t>& l,
@@ -167,7 +152,6 @@ Model::Model(const std::vector<size_t>& l,
     optimizer = opt;
     loss = 0.;
 }
-
 
 
 void Model::set_parameters(size_t m)
@@ -205,7 +189,6 @@ void Model::set_parameters(size_t m)
 }
 
 
-
 void Model::forward_prop(const Matrix<double>& data)
 {
     size_t N = weights.size();
@@ -229,7 +212,6 @@ void Model::forward_prop(const Matrix<double>& data)
 }
 
 
-
 void Model::backward_prop(const Matrix<double>& data,
                           const Matrix<double>& labels)
 {
@@ -239,7 +221,7 @@ void Model::backward_prop(const Matrix<double>& data,
     vector< Matrix<double> > da(N);
     vector< Matrix<double> > dz(N);
 
-    double (*g)(double);//function pointer to activations
+    double (*g)(double);//function pointer to derivatives of activations 
 
     if(loss_function == "cross_entropy")
         da[N-1] = cross_entropy_deriv(labels, alphas[alphas.size()-1]);
@@ -315,9 +297,10 @@ void Model::train(const double& learning_rate,
     //but then the biases would need broadcasting here to have cols=batch_size
     size_t nx = train_data.rows();//num of features
     size_t  m = train_data.cols();//num of examples
-    size_t N = weights.size();    //num of parameters
+    size_t  N = weights.size();    //num of parameters
 
     size_t Nbatches = m/batch_size;
+    double beta{0.95}; //parameter of RMSprop
 
     //function pointer to loss functions
     double (*f)(const Matrix<double>&, const Matrix<double>&);
@@ -332,17 +315,13 @@ void Model::train(const double& learning_rate,
         throw "Loss error!\n";
     }
 
+    // function pointer to member functions for parameters update.
     void (Model::*update_func)(const double&);
     if(optimizer == "RMSprop")
-    {
         update_func = &Model::gradient_descent_with_RMSprop;
-    }
     else
-    {
         update_func = &Model::gradient_descent;
-    }
 
-    double beta{0.95};
 
     for(size_t ep = 0 ; ep < epochs ; ++ep)
     {
@@ -376,11 +355,13 @@ void Model::train(const double& learning_rate,
     out.close();
 }
 
+
 void Model::predict(const Matrix<double>& new_data)
 {
     size_t m = new_data.cols();
     for(size_t i = 0 ; i < biases.size() ; ++i)
-    { //biases also need broadcast here for the new data on the test set
+    { //biases also need broadcast here for the new data which may have
+      // different number of examples
         biases[i] = extend_cols(biases[i], m);
     }
 
@@ -398,11 +379,13 @@ double Model::evaluate(const Matrix<double>& new_data,
 
     predict(new_data);
     Matrix<double> pred = alphas[alphas.size()-1];
-    double error{0.};
+    double error = 0.;
     if(metrics == "mae")
     {
         error = mean_absolute_error(new_labels, pred);
     }
+    //else if
+    // Until the inclusion of other metrics, this is the only one.
 
     return error;
 }
