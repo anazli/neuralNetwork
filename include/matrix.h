@@ -32,6 +32,7 @@ public:
     const T& operator()(size_t i, size_t j)const{return m_matrix[i][j];}
     Matrix<T> operator-()const;
 
+
     void shape()const{std::cout << "(" << rows() << "," << cols() << ")\n";}
     void print()const;
     void print_to_file(std::string file)const;
@@ -70,6 +71,13 @@ Matrix<int> int_rand(size_t, size_t, size_t, size_t);
 template <typename T>
 Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
 {
+
+    if(f == nullptr)
+    {
+        std::cout << "Enter a valid function![apply_function]\n";
+        throw "apply_function error.\n";
+    }
+
     size_t r = m.rows();
     size_t c = m.cols();
     Matrix<T> ret(r,c);
@@ -80,6 +88,42 @@ Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
             ret(i,j) = f( m(i,j) );
         }
     } 
+
+    return ret;
+}
+
+
+
+template <typename T>
+Matrix<T> apply_function(const Matrix<T>& m,
+                         Matrix<T> (*f)(const Matrix<T>&))
+{
+
+    if(f == nullptr)
+    {
+        std::cout << "Enter a valid function![apply_function]\n";
+        throw "apply_function error.\n";
+    }
+
+    Matrix<double> ret = f(m);
+
+    return ret;
+}
+
+
+
+template <typename T>
+Matrix<T> apply_function(const Matrix<T>& m1, const Matrix<T>& m2,
+                         Matrix<T> (*f)(const Matrix<T>&, const Matrix<T>&))
+{
+
+    if(f == nullptr)
+    {
+        std::cout << "Enter a valid function![apply_function]\n";
+        throw "apply_function error.\n";
+    }
+
+    Matrix<double> ret = f(m1,m2);
 
     return ret;
 }
@@ -99,10 +143,17 @@ Matrix<T> apply_function(const Matrix<T>& m, T (*f)(T))
 template <typename T>
 Matrix<T> sum(const Matrix<T>& m, size_t axis = 0)
 {
+    if(axis < 0 || axis > 1)
+    {
+        std::cout << "Wrong axis, enter (0 or 1)![sum]\n";
+        throw "Sum error.\n";
+    }
     size_t r = m.rows();
     size_t c = m.cols();
+
     if(axis == 0) //sum of all rows
     {
+
         Matrix<T> ret(1,c);
         for(size_t i = 0 ; i < c ; ++i)
         {
@@ -111,11 +162,11 @@ Matrix<T> sum(const Matrix<T>& m, size_t axis = 0)
                 ret(0,i) += m(j,i); //sum of every row in a given column
             }
         }
-
         return ret;
     }
     if(axis == 1) //sum of all cols
     {
+
         Matrix<T> ret(r,1);
         for(size_t i = 0 ; i < r ; ++i)
         {
@@ -124,13 +175,8 @@ Matrix<T> sum(const Matrix<T>& m, size_t axis = 0)
                 ret(i,0) += m(i,j); //sum of every col in a given row
             }
         }
-
         return ret;
     }
-
-    std::cout << "Please specify the axis! 0 = sum of rows, 1 = sum of"
-                                                            " columns.\n";
-    throw "Sumation error!\n";
 }
 
 
@@ -148,8 +194,15 @@ Matrix<T> sum(const Matrix<T>& m, size_t axis = 0)
 template <typename T>
 Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
 {
+    if(axis < 0 || axis > 1)
+    {
+        std::cout << "Wrong axis, enter (0 or 1)![mean_value]\n";
+        throw "mean_value error.\n";
+    }
+
     size_t r = m.rows();
     size_t c = m.cols();
+
     if(axis == 0)
     {
         Matrix<T> ret(1,c);
@@ -164,13 +217,6 @@ Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
         ret = ret/(double)c;
         return ret;
     }
-    else
-    {
-        std::cout << "Please specify the axis! 0 = mu of rows,"
-                                         "1 = mu of columns.\n";
-        throw "Mean value error!\n";
-    }
-
 }
 
 
@@ -188,6 +234,12 @@ Matrix<T> mean_value(const Matrix<T>& m, size_t axis = 0)
 template <typename T>
 Matrix<T> standard_dev(const Matrix<T>& m, size_t axis = 0)
 {
+    if(axis < 0 || axis > 1)
+    {
+        std::cout << "Wrong axis, enter (0 or 1)![standard_dev]\n";
+        throw "standard_dev error.\n";
+    }
+
     size_t r = m.rows();
     size_t c = m.cols();
 
@@ -209,13 +261,98 @@ Matrix<T> standard_dev(const Matrix<T>& m, size_t axis = 0)
         ret = apply_function(ret, sqrt);
         return ret;
     }
-    else
+}
+
+
+
+/*! \brief Returns the index of the maximum element of a row or column vector.  
+ *
+ *  @param Input matrix(row or column vector) which the operation is applied on. 
+ *  @return A size_t value which is the index of the maximum element. 
+ */
+template <typename T>
+size_t arg_max(const Matrix<T>& m)
+{
+    size_t r = m.rows();
+    size_t c = m.cols();
+    size_t max_id{0};
+    T max{0};
+
+    if(r == 1 && c != 1)
     {
-        std::cout << "Please specify the axis! 0 = std of rows,"
-                                         "1 = std of columns.\n";
-        throw "Standard dev error!\n";
+       for(size_t i = 0 ; i < c ; ++i)
+       {
+           if(max < m(0,i))
+           {
+               max = m(0,i);
+               max_id = i; 
+           }
+       } 
+    }
+    else if(c == 1 && r != 1)
+    {
+       for(size_t i = 0 ; i < r ; ++i)
+       {
+           if(max < m(i,0))
+           {
+               max = m(i,0);
+               max_id = i; 
+           }
+       } 
+    }
+    return max_id;
+}
+
+
+
+// Reads the input data and returns an array (r,c). The rows and cols
+// must be known in advance. Training requires the data to be of the form
+// (nx,m)
+template <typename T>
+void read_from_file(std::string file, Matrix<T>& m) 
+{   
+    size_t r = m.rows();
+    size_t c = m.cols();
+    std::ifstream in;
+    in.open(file);
+    for(size_t i = 0 ; i < r ; ++i)
+    {
+        for(size_t j = 0 ; j < c ; ++j)
+        {
+            T x;
+            in >> x;
+            m(i,j) = x;
+        }
+    }
+    in.close();
+}
+
+
+
+template <typename T>
+void one_hot(const Matrix<T>& v, Matrix<T>& mat)
+{
+    size_t r = mat.rows();
+    size_t c = mat.cols();//assumes v is column vector. so c = 1
+    for(size_t i = 0 ; i < c ; ++i) //for every example
+    {
+        for(size_t j = 0 ; j < r ; ++j) //assign 1 to the v(i,0)th row element 
+        {                               //and zero elsewhere
+            if(v(i,0) == j)
+                mat(j,i) = 1.;
+            else
+                mat(j,i) = 0.;
+        }
     }
 }
+
+
+
+/********************************************************************
+ * 
+ * MEMBER FUNCTIONS  
+ * 
+ ********************************************************************/
 
 
 
@@ -234,8 +371,9 @@ Matrix<T>::Matrix(size_t r, size_t c, T elem)
     int ic = static_cast<int>(c); // input will change to unsigned long which 
     if(ir < 0 || ic < 0)          // gives a big positive number.
     {
-        std::cout << "Invalid size:" << "(" << ir << "," << ic << ") for a Matrix!\n";
-        throw "Dimension error!";
+        std::cout << "Invalid size:" << "(" << ir << "," << ic << ")"
+                                      " for a Matrix![Constructor]\n";
+        throw "Constructor error!";
     }
 
     std::vector< std::vector<T> > temp(r, std::vector<T>(c, elem));
@@ -296,6 +434,12 @@ void Matrix<T>::print()const
 template <typename T>
 void Matrix<T>::print_to_file(std::string file)const
  {
+    if(file == " ")
+    {
+        std::cout << "Enter a valid file name![print_to_file]\n";
+        throw "print_to_file error.\n";
+    }
+     
     size_t r = rows();
     size_t c = cols();
     std::ofstream out;
@@ -330,7 +474,7 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
     if(static_cast<int>(r1) > static_cast<int>(r2) ||
        static_cast<int>(c1) > static_cast<int>(c2))
     {
-        std::cout << "Invalid intervals for a sub-matrix!\n";
+        std::cout << "Invalid interval![sub_matrix]\n";
         throw "Interval error!\n";
     }
     //When one argument is negative, we want an Index out of bounds exception.
@@ -338,7 +482,7 @@ Matrix<T> Matrix<T>::sub_matrix(size_t r1, size_t r2, size_t c1, size_t c2)const
     if( (static_cast<int>(r1) < 0 || static_cast<int>(r2) > this->rows()) ||
         (static_cast<int>(c1) < 0 || static_cast<int>(c2) > this->cols()) )
     {
-        std::cout << "Index out of  bounds!\n";
+        std::cout << "Index out of  bounds![sub_matrix]\n";
         throw "Out of bounds error!\n";
     }
 
@@ -436,8 +580,9 @@ Matrix<T> multiply(const Matrix<T>& m1, const Matrix<T>& m2)
     if(cols1 != rows2)
     {
         std::cout << "Cannot multiply a (" << rows1 << "," << cols1 << 
-                ") matrix with a (" << rows2 << "," << cols2 << ") matrix\n";
-        throw "Multiplication error!";
+                ") matrix with a (" << rows2 << "," << cols2 << ") matrix."
+                                                            " [multiply]\n";
+        throw "multiply error!";
     }
 
     Matrix<T> m(rows1, cols2);
@@ -471,6 +616,12 @@ Matrix<T> multiply(const Matrix<T>& m1, const Matrix<T>& m2)
 template <typename T>
 Matrix<T> extend_rows(const Matrix<T>& m, size_t r)
 {
+    if(static_cast<int>(r) < 1)
+    {
+        std::cout << "Enter a valid number of rows![extend_rows]\n";
+        throw "extend_rows error!\n";
+    }
+    //actually, it's possible to get a smaller matrix with r < m.rows()
     size_t c = m.cols();
     Matrix<T> ret(r,c);
     for(size_t i = 0 ; i < r ; ++i)
@@ -496,6 +647,12 @@ Matrix<T> extend_rows(const Matrix<T>& m, size_t r)
 template <typename T>
 Matrix<T> extend_cols(const Matrix<T>& m, size_t c)
 {
+    if(static_cast<int>(c) < 1)
+    {
+        std::cout << "Enter a valid number of columns![extend_cols]\n";
+        throw "extend_rows error!\n";
+    }
+    //actually, it's possible to get a smaller matrix with c < m.cols()
     size_t r = m.rows();
     Matrix<T> ret(r,c);
     for(size_t i = 0 ; i < r ; ++i)
@@ -548,7 +705,7 @@ Matrix<T> operator+(const Matrix<T>& m1, const Matrix<T>& m2)
 {
     if(m1 != m2)
     {
-        std::cout << "Cannot add two Matrices with different shapes!\n";
+        std::cout << "Cannot add two Matrices with different shapes![+]\n";
         throw "Addition error.\n";
     }
 
@@ -606,7 +763,7 @@ Matrix<T> operator-(const Matrix<T>& m1, const Matrix<T>& m2)
 {
     if(m1 != m2)
     {
-        std::cout << "Cannot subtract two Matrices with different shapes!\n";
+        std::cout << "Cannot subtract two Matrices with different shapes![-]\n";
         throw "Subtraction error.\n";
     }
     return m1 + (-m2);
@@ -640,11 +797,11 @@ template <typename T>
 Matrix<T> operator*(const Matrix<T>& m1, const Matrix<T>& m2)
 {
     Matrix<T> temp(1,1); 
-    if(m1 == temp) //if one matrix is (1,1)=scalar do matrix-scalar
+    if(m1 == temp && m2 != temp) //if one matrix is (1,1)=scalar do matrix-scalar
     {              //element-wise multiplication.
         return m1(0,0) * m2;
     }
-    else if(m2 == temp) // the same.
+    else if(m2 == temp && m1 != temp) // the same.
     {
         return m1 * m2(0,0);
     }

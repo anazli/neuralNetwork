@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-test_labels = np.loadtxt('../data/test_labels.dat')
+test_labels = np.loadtxt('../data/boston_house/test_labels.dat')
 test_predictions = np.loadtxt('predictions.dat') 
 
 plt.figure()

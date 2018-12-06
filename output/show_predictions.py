@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-labels = np.loadtxt('../data/test_labels.dat')
+labels = np.loadtxt('../data/boston_house/test_labels.dat')
 pred = np.loadtxt('predictions.dat')
 
 error = pred - labels

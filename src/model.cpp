@@ -25,16 +25,19 @@ double sigmoid(double x)
 }
 
 
+
 double sigmoid_deriv(double x)
 {
     return sigmoid(x) * (1. - sigmoid(x)); 
 }
 
 
+
 double relu(double x)
 {
     return max(0.,x);
 }
+
 
 
 double relu_deriv(double x)
@@ -46,6 +49,58 @@ double relu_deriv(double x)
 
     return NAN;
 }
+
+
+
+Matrix<double> softmax(const Matrix<double>& mat)
+{
+    size_t nx = mat.rows();
+    size_t  m = mat.cols();
+    Matrix<double> ret = apply_function(mat, exp);
+    Matrix<double>  s = sum(ret,0);
+    s = extend_rows(s, nx);
+    ret = ret/s;
+    return ret;
+}
+
+
+
+Matrix<double> softmax_deriv(const Matrix<double>& da, const Matrix<double>& z)
+{
+    size_t r = z.rows();
+    size_t c = z.cols();
+    Matrix<double> delta(r,r);
+    for(size_t i = 0 ; i < r ; ++i)
+    {
+        for(size_t j = 0 ; j < r ; ++j)
+        {
+            if(i == j)
+                delta(i,j) = 1.;
+            else
+                delta(i,j) = 0.;
+        }
+    }
+    Matrix<double> s = softmax(z);
+    Matrix<double> row_i;
+    Matrix<double> ret(r,c);
+    Matrix<double> ones(r,1,1);//create a row vector of ones 
+    for(size_t i = 0 ; i < c ; ++i) //for every example
+    {
+        Matrix<double> temp = s.sub_matrix(0,r,i,i); //take the row vec
+        Matrix<double> da_row = da.sub_matrix(0,r,i,i);
+        Matrix<double> z_i = multiply(temp, ones.trans());
+        Matrix<double> z_j = multiply(ones, temp.trans());
+        row_i = z_i * (delta - z_j); //calculate the derivatives
+        Matrix<double> vec_final = multiply(row_i, da_row);
+        for(size_t j = 0 ; j < r ; ++j) //assign the new row to the result mat.
+        {
+            ret(j,i) = vec_final(j,0);
+        }
+    }
+
+    return ret;
+}
+
 
 
 /***********************************************
@@ -86,9 +141,27 @@ Matrix<double> mse_deriv(const Matrix<double>& y, const Matrix<double>& a)
 }
 
 
+
+double softmax_loss(const Matrix<double>& y, const Matrix<double>& a)
+{
+    Matrix<double> temp = -multiply(y, apply_function(a, log).trans());
+    Matrix<double> s = sum(temp,0);
+    Matrix<double> ret = sum(s,1);
+    return ret(0,0);
+}
+
+Matrix<double> softmax_loss_deriv(const Matrix<double>& y,
+                                  const Matrix<double>& a)
+{
+    return a - y;
+}
+
+
+
 /***********************************************
  * Metrics  
  ***********************************************/
+
 
 
 double mean_absolute_error(const Matrix<double>& y, const Matrix<double>& a)
@@ -98,6 +171,30 @@ double mean_absolute_error(const Matrix<double>& y, const Matrix<double>& a)
     dif = apply_function(dif, fabs);
     Matrix<double> ret = sum(dif,1);
     return ret(0,0)/(double)c; 
+}
+
+
+
+double accuracy(const Matrix<double>& y, const Matrix<double>& a)
+{
+    size_t m = y.cols();  //number of training examples
+    size_t cl = y.rows(); //number of classes (multivariate classification)
+    double error{0.};
+    int count{0};
+    for(size_t i = 0 ; i < m ; ++i)
+    {
+        Matrix<double> label_i = y.sub_matrix(0,cl,i,i);
+        Matrix<double> pred_i = a.sub_matrix(0,cl,i,i);
+         
+        size_t label_max_id = arg_max(label_i);
+        size_t pred_max_id = arg_max(pred_i);
+
+        if(label_max_id != pred_max_id)
+            count++;
+    }
+
+    error = (double)count/(double)m;
+    return error;
 }
 
 
@@ -111,26 +208,6 @@ double glorot_uniform(size_t input_layer, size_t output_layer)
     return (6./sqrt(input_layer + output_layer)); 
 }
 
-
-// Reads the input data and returns an array (r,c). The rows and cols
-// must be known in advance. Training requires the data to be of the form
-// (nx,m)
-Matrix<double> read_from_file(const std::string& file, size_t r, size_t c)
-{   
-    ifstream in;
-    in.open(file);
-    Matrix<double> ret(r,c);
-    for(size_t i = 0 ; i < r ; ++i)
-    {
-        for(size_t j = 0 ; j < c ; ++j)
-        {
-            double x;
-            in >> x;
-            ret(i,j) = x;
-        }
-    }
-    return ret;
-}
 
 
 
@@ -163,7 +240,7 @@ void Model::set_parameters(size_t m)
 
         double limit = glorot_uniform(layers[i-1], layers[i]); 
 
-        Matrix<double> w = real_rand(layers[i], layers[i-1],-limit,limit);
+        Matrix<double> w = 0.001*real_rand(layers[i], layers[i-1],-limit,limit);
         weights.push_back(w);
 
         Matrix<double> w_der(w.rows(), w.cols());
@@ -193,20 +270,19 @@ void Model::forward_prop(const Matrix<double>& data)
 {
     size_t N = weights.size();
     Matrix<double> X = data;
-    double (*f)(double);
-
     for(size_t i = 0 ; i < N ; ++i)
     {
         zetas[i] = multiply(weights[i], X) + biases[i];
 
         if(activations[i] == "relu")
-            f = relu;
+            alphas[i] = apply_function(zetas[i], relu);
         else if(activations[i] == "sigmoid")
-            f = sigmoid;
+            alphas[i] = apply_function(zetas[i], sigmoid);
+        else if(activations[i] == "softmax")
+            alphas[i] = apply_function(zetas[i], softmax);
         else
             cout << "Please specify the activation of layer:" << i << endl;
 
-        alphas[i] = apply_function(zetas[i], f);
         X = alphas[i];
     }
 }
@@ -221,34 +297,34 @@ void Model::backward_prop(const Matrix<double>& data,
     vector< Matrix<double> > da(N);
     vector< Matrix<double> > dz(N);
 
-    double (*g)(double);//function pointer to derivatives of activations 
-
     if(loss_function == "cross_entropy")
         da[N-1] = cross_entropy_deriv(labels, alphas[alphas.size()-1]);
     else if(loss_function == "mean_squared_error")
         da[N-1] = mse_deriv(labels, alphas[alphas.size()-1]);
-    //no need for else. runs after loss calculation in train func.
+    else if(loss_function == "softmax_loss")
+        da[N-1] = softmax_loss_deriv(labels, alphas[alphas.size()-1]);
 
     for(size_t i = (N-1) ; i > 0 ; --i)         
     {
         if(activations[i] == "relu")
-            g = relu_deriv;
+            dz[i] = da[i] * apply_function(zetas[i], relu_deriv); 
         else if(activations[i] == "sigmoid")
-            g = sigmoid_deriv;
-        //no need for else. runs after forward_prop
+            dz[i] = da[i] * apply_function(zetas[i], sigmoid_deriv); 
+        else if(activations[i] == "softmax")
+            dz[i] = apply_function(da[i], zetas[i], softmax_deriv); 
 
-        dz[i] = da[i] * apply_function(zetas[i], g); 
         dw[i] = (1./(double)m) * multiply(dz[i], alphas[i-1].trans());
         db[i] = (1./(double)m) * sum(dz[i],1);
         da[i-1] = multiply(weights[i].trans(), dz[i]); 
     } 
     
     if(activations[0] == "relu")
-        g = relu_deriv;
+        dz[0] = da[0] * apply_function(zetas[0], relu_deriv);
     else if(activations[0] == "sigmoid")
-        g = sigmoid_deriv;
+        dz[0] = da[0] * apply_function(zetas[0], sigmoid_deriv);
+    else if(activations[0] == "softmax")
+        dz[0] = apply_function(da[0], zetas[0], softmax_deriv);
 
-    dz[0] = da[0] * apply_function(zetas[0], g);
     dw[0] = (1./(double)m) * multiply(dz[0], data.trans());
     db[0] = (1./(double)m) * sum(dz[0],1);
     
@@ -298,6 +374,7 @@ void Model::train(const double& learning_rate,
     size_t nx = train_data.rows();//num of features
     size_t  m = train_data.cols();//num of examples
     size_t  N = weights.size();    //num of parameters
+    size_t Nclasses = train_labels.rows(); //for multiclass classification
 
     size_t Nbatches = m/batch_size;
     double beta{0.95}; //parameter of RMSprop
@@ -309,6 +386,8 @@ void Model::train(const double& learning_rate,
         f = mean_squared_error;
     else if(loss_function == "cross_entropy")
         f = cross_entropy;
+    else if(loss_function == "softmax_loss")
+        f = softmax_loss;
     else
     {
         cout << "Please specify the loss function!" << endl;
@@ -332,10 +411,11 @@ void Model::train(const double& learning_rate,
             size_t right = batch_size*(i+1);
 
             Matrix<double> batch_data = train_data.sub_matrix(0,nx,left,right);
-            Matrix<double> batch_labels = train_labels.sub_matrix(0,0,left,right);
+            Matrix<double> batch_labels = train_labels.sub_matrix(0,Nclasses,left,right);
+            //Nclasses for mutli-class classification
 
             forward_prop(batch_data);
-            loss += f(batch_labels, alphas[alphas.size()-1]);
+            loss += f(batch_labels, alphas[alphas.size()-1])/(double)batch_size;
             backward_prop(batch_data, batch_labels);
 
             if(optimizer == "RMSprop")
@@ -349,7 +429,7 @@ void Model::train(const double& learning_rate,
 
             (this->*update_func)(learning_rate);
         }
-        loss = loss/(double)batch_size;
+        loss = loss/(double)Nbatches;//batch_size;
         out << loss << endl;
     }
     out.close();
@@ -381,11 +461,9 @@ double Model::evaluate(const Matrix<double>& new_data,
     Matrix<double> pred = alphas[alphas.size()-1];
     double error = 0.;
     if(metrics == "mae")
-    {
         error = mean_absolute_error(new_labels, pred);
-    }
-    //else if
-    // Until the inclusion of other metrics, this is the only one.
+    else if(metrics == "accuracy")
+        error = accuracy(new_labels, pred);
 
     return error;
 }

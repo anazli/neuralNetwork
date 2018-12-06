@@ -8,17 +8,23 @@ using namespace std;
 
 int main()
 {
+    size_t nx = 13;
+    size_t train_size = 404;
+    size_t test_size = 102;
+    size_t Nclasses = 1;
     // Boston housing dataset. Data form (m,nx)
-    Matrix<double> train_data = read_from_file("data/train_data.dat", 404, 13);
-    Matrix<double> train_labels = read_from_file("data/train_labels.dat", 1, 404);
-    Matrix<double> test_data = read_from_file("data/test_data.dat", 102, 13);
-    Matrix<double> test_labels = read_from_file("data/test_labels.dat", 1, 102);
+    Matrix<double> train_data(train_size, nx);
+    read_from_file("data/boston_house/train_data.dat", train_data);
+    Matrix<double> train_labels(Nclasses, train_size);
+    read_from_file("data/boston_house/train_labels.dat", train_labels);
+    Matrix<double> test_data(test_size, nx);
+    read_from_file("data/boston_house/test_data.dat", test_data);
+    Matrix<double> test_labels(Nclasses, test_size);
+    read_from_file("data/boston_house/test_labels.dat", test_labels);
 
     //data must be of the form (nx,m) for training and evaluation.
     train_data = train_data.trans();
     test_data = test_data.trans();
-
-    size_t nx = train_data.rows();
 
     vector<size_t> layers{nx, 64, 64, 1}; //including the input layer. 
     vector<string> activ{"relu", "relu", "relu"};
@@ -34,14 +40,3 @@ int main()
 
     return 0;
 }
-
-//when data needs normalization
-/*size_t r = m.rows();
-size_t c = m.cols();
-
-Matrix<double> ret(r,c);
-Matrix<double> mu = mean_value(m,1);
-Matrix<double> st = standard_dev(m,1);
-mu = extend_cols(mu,c);
-st = extend_cols(mu,c); 
-ret = (ret-mu)/st;*/
